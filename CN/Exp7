@@ -1,0 +1,74 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <time.h>
+#include <unistd.h>  // for sleep()
+
+#define MAX_FRAMES 50
+
+int window_size;   // Size of the sliding window
+int total_frames;  // Total frames to be sent
+
+// Function to simulate whether a frame/ACK is lost
+int is_lost(float loss_prob) {
+    float r = (float)rand() / RAND_MAX;
+    return (r < loss_prob);
+}
+
+void selectiveRepeat() {
+    int send_base = 0;
+    int acked[MAX_FRAMES] = {0};
+
+    while (send_base < total_frames) {
+        // Send frames in the window
+        for (int i = send_base; i < send_base + window_size && i < total_frames; i++) {
+            if (!acked[i]) {  // Only send if not yet acknowledged
+                printf("Sender: Sending Frame %d\n", i + 1);
+
+                if (is_lost(0.2)) {  // 20% chance frame is lost
+                    printf("⚠️ Frame %d lost in transmission!\n", i + 1);
+                }
+                sleep(1);
+            }
+        }
+
+        // Simulate ACKs for frames in the window
+        for (int i = send_base; i < send_base + window_size && i < total_frames; i++) {
+            if (!acked[i]) {
+                if (is_lost(0.2)) {  // 20% chance ACK is lost
+                    printf("⚠️ ACK %d lost! Frame %d will be resent.\n", i + 1, i + 1);
+                } else {
+                    printf("Receiver: ACK %d received\n", i + 1);
+                    acked[i] = 1;
+                }
+            }
+        }
+
+        // Slide the window forward
+        while (send_base < total_frames && acked[send_base]) {
+            send_base++;
+        }
+        sleep(1);
+    }
+
+    printf("\n✅ All frames successfully transmitted with Selective Repeat ARQ!\n");
+}
+
+int main() {
+    srand(time(0)); // Random seed
+
+    printf("Enter total number of frames to send: ");
+    scanf("%d", &total_frames);
+
+    printf("Enter window size: ");
+    scanf("%d", &window_size);
+
+    if (total_frames > MAX_FRAMES) {
+        printf("Max frames allowed is %d\n", MAX_FRAMES);
+        return 1;
+    }
+
+    printf("\n--- Selective Repeat ARQ Protocol Simulation ---\n\n");
+    selectiveRepeat();
+
+    return 0;
+}
